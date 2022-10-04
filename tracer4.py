@@ -1,4 +1,3 @@
-from cmath import log
 import socket
 import random
 import time
@@ -28,41 +27,44 @@ def create_sender(ttl):
 
     return s
 
+def troy_the_tracer():
+    port = random.choice(range(33434,33535))
+    ttl = 0
+    alvo = input('Endereço do Alvo: ')
+    track_list = []
+    # alvo = 'google.com'
 
-port = random.choice(range(33434,33535))
-ttl = 0
-alvo = input('Endereço do Alvo: ')
-# alvo = 'google.com'
+    while True:
+        ttl += 1
+        alvo = socket.gethostbyname(alvo);
+        # print('\nTTL: {}'.format(ttl))
 
-while True:
-    ttl += 1
-    alvo = socket.gethostbyname(alvo);
-    # print('\nTTL: {}'.format(ttl))
+        receiver = create_receiver()
+        receiver.settimeout(10)
+        receiver.bind(('', 0))
 
-    receiver = create_receiver()
-    receiver.settimeout(10)
-    receiver.bind(('', 0))
+        send_time = time.time()
+        sender = create_sender(ttl=ttl)
+        sender.sendto(b'',(alvo, port))
 
-    send_time = time.time()
-    sender = create_sender(ttl=ttl)
-    sender.sendto(b'',(alvo, port))
+        try:
+            data, addr = receiver.recvfrom(1024)
+            receive_time = time.time()
+            exchange_time = (receive_time - send_time) * 1000
+            # print('data: {}'.format(data))
+            track_list.append(addr[0])
+            print(f'{ttl}\t Endereço: {addr[0]} Alvo: {alvo} tempo de salto: {exchange_time:.3f} ms')
 
-    try:
-        data, addr = receiver.recvfrom(1024)
-        receive_time = time.time()
-        exchange_time = (receive_time - send_time) * 1000
-        # print('data: {}'.format(data))
-        print(f'{ttl}\t ADDR: {addr[0]} Alvo: {alvo} Time: {exchange_time:.3f} ms')
+            if addr == alvo or ttl > MAX_TTL:
+                break
+            
+        except socket.timeout:
+            print('{}\t * * *'.format(ttl))
 
-        if addr == alvo or ttl > MAX_TTL:
+        if addr[0] == alvo or ttl > MAX_TTL:
+            print('{}\t Endereço: {} Alvo: {} /n END'.format(ttl, addr[0], alvo))
             break
-        
-    except socket.timeout:
-        print('{}\t * * *'.format(ttl))
 
-    if addr[0] == alvo or ttl > MAX_TTL:
-        print('{}\t ADDR: {} Alvo: {} /n END'.format(ttl, addr, alvo))
-        break
-
-receiver.close()                
-sender.close()
+    receiver.close()                
+    sender.close()
+    return track_list
